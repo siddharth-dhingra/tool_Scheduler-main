@@ -1,0 +1,30 @@
+server:
+  port: 8081
+
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3307/capstone
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: "toolscheduler-group"
+      auto-offset-reset: earliest
+      properties:
+        spring.json.trusted.packages: "*"
+      listener:
+        ack-mode: record
+
+app:
+  kafka:
+    topics:
+      scan: "tool-scan-ingestion"
+      filelocation: "file-location-topic"
+
+
+

@@ -22,7 +22,6 @@ public class KafkaConfig {
 
     private static final String BOOTSTRAP = "localhost:9092";
 
-    // Consumer for (String, ScanEvent)
     @Bean
     public ConsumerFactory<String, ScanEvent> scanEventConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -32,7 +31,6 @@ public class KafkaConfig {
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "toolscheduler-group");
         props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
         props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-//        props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.parser.Parser.Application.model.ScanEvent");
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new StringDeserializer(),
@@ -48,7 +46,6 @@ public class KafkaConfig {
         return factory;
     }
 
-    // Producer for (String, ScanEvent) so we can produce a dummy event
     @Bean
     public ProducerFactory<String, ScanEvent> scanEventProducerFactory() {
         Map<String, Object> props = new HashMap<>();
@@ -64,7 +61,6 @@ public class KafkaConfig {
         return new KafkaTemplate<>(scanEventProducerFactory());
     }
 
-    // Producer for FileLocationEvent
     @Bean
     public ProducerFactory<String, FileLocationEvent> fileLocationProducerFactory() {
         Map<String, Object> props = new HashMap<>();

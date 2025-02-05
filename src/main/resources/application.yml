@@ -23,6 +23,7 @@ spring:
 app:
   kafka:
     topics:
+      update: "tool-update-ingestion"
       scan: "tool-scan-ingestion"
       filelocation: "file-location-topic"
 

@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.toolScheduler.ToolSchedulerApplication.model.FileLocationEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
-import com.toolScheduler.ToolSchedulerApplication.model.User;
+import com.toolScheduler.ToolSchedulerApplication.model.Tenant;
 import com.toolScheduler.ToolSchedulerApplication.producer.FileEventProducer;
-import com.toolScheduler.ToolSchedulerApplication.repository.UserRepository;
+import com.toolScheduler.ToolSchedulerApplication.repository.TenantRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -18,43 +18,39 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class ScanEventService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScanEventService.class);
 
-    private final UserRepository userRepository;
+    private final TenantRepository tenantRepository;
     private final GitHubScanService gitHubScanService;
     private final FileEventProducer fileEventProducer;
 
-    public ScanEventService(UserRepository userRepository,
+    public ScanEventService(TenantRepository tenantRepository,
                             GitHubScanService gitHubScanService,
                             FileEventProducer fileEventProducer) {
-        this.userRepository = userRepository;
+        this.tenantRepository = tenantRepository;
         this.gitHubScanService = gitHubScanService;
         this.fileEventProducer = fileEventProducer;
     }
 
     public void processScanEvent(ScanEvent event) throws JsonMappingException, JsonProcessingException {
-        User cred = findCredentials(event.getOwner(), event.getRepo());
-        if (cred == null) {
+        String tenantId = event.getTenantId();
+        Optional<Tenant> optTenant = tenantRepository.findByTenantId(tenantId);
+        if (optTenant.isEmpty()) {
+            LOGGER.error("No tenant found with tenantId={}", tenantId);
             return;
         }
+        Tenant tenant = optTenant.get();
 
         List<ScanType> effectiveTypes = expandTypes(event.getTypes());
 
         for (ScanType toolType : effectiveTypes) {
-            performScanAndPublish(cred, event, toolType);
+            performScanAndPublish(tenant, toolType);
         }
-    }
-
-    private User findCredentials(String owner, String repo) {
-        User cred = userRepository.findByOwnerAndRepo(owner, repo);
-        if (cred == null) {
-            LOGGER.error("No credential found for {}/{}", owner, repo);
-        }
-        return cred;
     }
 
     private List<ScanType> expandTypes(List<ScanType> incomingTypes) {
@@ -67,23 +63,28 @@ public class ScanEventService {
         return incomingTypes;
     }
 
-    private void performScanAndPublish(User cred, ScanEvent event, ScanType toolType) throws JsonMappingException, JsonProcessingException {
-        String rawJson = gitHubScanService.performSingleToolScan(cred.getPat(), event, toolType);
+    private void performScanAndPublish(Tenant tenant, ScanType toolType) throws JsonMappingException, JsonProcessingException {
+        String rawJson = gitHubScanService.performSingleToolScan(
+                tenant.getPat(), 
+                tenant.getOwner(), 
+                tenant.getRepo(), 
+                toolType
+        );
 
         String toolFolder = mapToolFolder(toolType);
-        String folderPath = buildFolderPath(toolFolder, event);
+        String folderPath = buildFolderPath(toolFolder, tenant.getOwner(), tenant.getRepo());
 
         if (!createFolderIfNeeded(folderPath)) {
             LOGGER.error("Failed to create directories at: {}", folderPath);
             return;
         }
 
-        String filePath = buildFilePath(folderPath, event);
+        String filePath = buildFilePath(folderPath, tenant.getOwner(), tenant.getRepo());
         if (!writeJsonToFile(filePath, rawJson, toolType)) {
             return;
         }
 
-        FileLocationEvent fle = new FileLocationEvent(filePath, event.getOwner(), event.getRepo(), toolFolder);
+        FileLocationEvent fle = new FileLocationEvent(filePath, tenant.getEsIndex(), toolFolder);
         fileEventProducer.publishFileLocationEvent(fle);
         LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
     }
@@ -97,11 +98,11 @@ public class ScanEventService {
         };
     }
 
-    private String buildFolderPath(String toolFolder, ScanEvent event) {
+    private String buildFolderPath(String toolFolder, String owner, String repo) {
         return "/Users/siddharth.dhingra/Desktop/scan/"
                 + toolFolder + "/"
-                + event.getOwner() + "/"
-                + event.getRepo();
+                + owner + "/"
+                + repo;
     }
 
     private boolean createFolderIfNeeded(String folderPath) {
@@ -112,10 +113,10 @@ public class ScanEventService {
         return true;
     }
 
-    private String buildFilePath(String folderPath, ScanEvent event) {
+    private String buildFilePath(String folderPath, String owner, String repo) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String timestamp = LocalDateTime.now().format(formatter);
-        String fileName = "scan_" + event.getOwner() + "_" + event.getRepo() + "_" + timestamp + ".json";
+        String fileName = "scan_" + owner + "_" + repo + "_" + timestamp + ".json";
         return folderPath + File.separator + fileName;
     }
 

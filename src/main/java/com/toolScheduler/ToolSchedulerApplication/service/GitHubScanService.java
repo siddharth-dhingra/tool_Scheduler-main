@@ -5,7 +5,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
 
 import java.util.ArrayList;
@@ -24,14 +23,14 @@ public class GitHubScanService {
         this.webClientBuilder = webClientBuilder;
     }
 
-    public String performSingleToolScan(String pat, ScanEvent event, ScanType toolType) throws JsonMappingException, JsonProcessingException {
+    public String performSingleToolScan(String pat,  String owner, String repo, ScanType toolType) throws JsonMappingException, JsonProcessingException {
         switch (toolType) {
             case CODESCAN:
-                return fetchAlerts(event.getOwner(), event.getRepo(), "code-scanning", pat);
+                return fetchAlerts(owner, repo, "code-scanning", pat);
             case DEPENDABOT:
-                return fetchAlerts(event.getOwner(), event.getRepo(), "dependabot", pat);
+                return fetchAlerts(owner, repo, "dependabot", pat);
             case SECRETSCAN:
-                return fetchAlerts(event.getOwner(), event.getRepo(), "secret-scanning", pat);
+                return fetchAlerts(owner, repo, "secret-scanning", pat);
             default:
                 return "{}";
         }

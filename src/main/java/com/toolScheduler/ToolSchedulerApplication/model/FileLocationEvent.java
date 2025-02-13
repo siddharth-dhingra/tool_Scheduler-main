@@ -3,27 +3,22 @@ package com.toolScheduler.ToolSchedulerApplication.model;
 public class FileLocationEvent {
 
     private String filePath;
-    private String owner;
-    private String repo;
+    private String esIndex;
     private String toolName;
 
     public FileLocationEvent() {}
 
-    public FileLocationEvent(String filePath, String owner, String repo, String toolName) {
+    public FileLocationEvent(String filePath, String esIndex, String toolName) {
         this.filePath = filePath;
-        this.owner = owner;
-        this.repo = repo;
+        this.esIndex = esIndex;
         this.toolName = toolName;
     }
 
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
 
-    public String getOwner() { return owner; }
-    public void setOwner(String owner) { this.owner = owner; }
-
-    public String getRepo() { return repo; }
-    public void setRepo(String repo) { this.repo = repo; }
+    public String getEsIndex() { return esIndex; }
+    public void setEsIndex(String esIndex) { this.esIndex = esIndex; }
 
     public String getToolName() { return toolName; }
     public void setToolName(String toolName) { this.toolName = toolName; }
@@ -32,8 +27,7 @@ public class FileLocationEvent {
     public String toString() {
         return "FileLocationEvent{" +
                 "filePath='" + filePath + '\'' +
-                ", owner='" + owner + '\'' +
-                ", repo='" + repo + '\'' +
+                ", esIndex='" + esIndex + '\'' +
                 ", toolName='" + toolName + '\'' +
                 '}';
     }

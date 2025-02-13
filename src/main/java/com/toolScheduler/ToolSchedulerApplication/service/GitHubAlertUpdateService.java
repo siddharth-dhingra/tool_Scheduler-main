@@ -23,9 +23,9 @@ public class GitHubAlertUpdateService {
      * @param event the UpdateEvent specifying new state/reason
      * @param pat the GitHub personal access token for this (owner, repo)
      */
-    public void updateAlert(UpdateEvent event, String pat) {
+    public void updateAlert(UpdateEvent event, String pat, String owner, String repo) {
         ScanType tool = event.getToolType();
-        String url = buildPatchUrl(tool, event.getOwner(), event.getRepo(), event.getAlertNumber());
+        String url = buildPatchUrl(tool, owner, repo, event.getAlertNumber());
         String body = buildPatchBody(tool, event.getNewState(), event.getReason());
         System.out.println(body);
 

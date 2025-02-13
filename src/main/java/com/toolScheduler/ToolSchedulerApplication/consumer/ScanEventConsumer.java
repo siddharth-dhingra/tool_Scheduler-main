@@ -25,9 +25,6 @@ public class ScanEventConsumer {
     @Value("${app.kafka.topics.scan}")
     private String scanTopic;
 
-    @Value("${app.kafka.topics.filelocation}")
-    private String fileLocationTopic;
-
     @KafkaListener(topics = "${app.kafka.topics.scan}", groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "scanEventListenerContainerFactory")
     public void consumeScanEvent(ConsumerRecord<String, ScanEvent> record)

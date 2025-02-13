@@ -2,9 +2,9 @@ package com.toolScheduler.ToolSchedulerApplication.consumer;
 
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
+import com.toolScheduler.ToolSchedulerApplication.model.Tenant;
 import com.toolScheduler.ToolSchedulerApplication.model.UpdateEvent;
-import com.toolScheduler.ToolSchedulerApplication.model.User;
-import com.toolScheduler.ToolSchedulerApplication.repository.UserRepository;
+import com.toolScheduler.ToolSchedulerApplication.repository.TenantRepository;
 import com.toolScheduler.ToolSchedulerApplication.service.GitHubAlertUpdateService;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,14 +20,17 @@ public class UpdateEventConsumer {
     @Value("${app.kafka.topics.update}")
     private String updateTopic;
 
-    private final UserRepository userRepository;
+    @Value("${app.kafka.topics.scan}")
+    private String scanTopic;
+
+    private final TenantRepository tenantRepository;
     private final GitHubAlertUpdateService gitHubAlertUpdateService;
     private final KafkaTemplate<String, ScanEvent> scanEventProducer;
 
-    public UpdateEventConsumer(UserRepository userRepository,
+    public UpdateEventConsumer(TenantRepository tenantRepository,
                                GitHubAlertUpdateService gitHubAlertUpdateService,
                                KafkaTemplate<String, ScanEvent> scanEventProducer) {
-        this.userRepository = userRepository;
+        this.tenantRepository = tenantRepository;
         this.gitHubAlertUpdateService = gitHubAlertUpdateService;
         this.scanEventProducer = scanEventProducer;
     }
@@ -42,21 +45,22 @@ public class UpdateEventConsumer {
         System.out.println("Received UpdateEvent: " + event);
 
         // 1) Find credential for this (owner, repo)
-        User cred = userRepository.findByOwnerAndRepo(event.getOwner(), event.getRepo());
-        if (cred == null) {
-            System.err.println("No credential found for " + event.getOwner() + "/" + event.getRepo());
+        String tenantId = event.getTenantId();
+        Tenant tenant = tenantRepository.findByTenantId(tenantId).orElse(null);
+        if (tenant == null) {
+            System.err.println("No tenant found for tenantId=" + tenantId);
             return;
         }
 
         // 2) Call GitHub to update the alert
         try {
-            gitHubAlertUpdateService.updateAlert(event, cred.getPat());
+            gitHubAlertUpdateService.updateAlert(event, tenant.getPat(), tenant.getOwner(), tenant.getRepo());
             System.out.println("Successfully updated alert in GitHub => " + event);
 
             // 3) Produce a single-tool-type ScanEvent to re-scan & sync changes
             ScanType st = event.getToolType();
-            ScanEvent scanEvent = new ScanEvent(event.getRepo(), event.getOwner(), List.of(st));
-            scanEventProducer.send("tool-scan-ingestion", scanEvent);
+            ScanEvent scanEvent = new ScanEvent(tenantId, List.of(st));
+            scanEventProducer.send(scanTopic, scanEvent);
             System.out.println("Produced ScanEvent => " + scanEvent);
 
         } catch (Exception e) {

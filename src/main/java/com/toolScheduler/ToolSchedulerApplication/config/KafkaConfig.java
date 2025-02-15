@@ -1,5 +1,7 @@
 package com.toolScheduler.ToolSchedulerApplication.config;
-import com.toolScheduler.ToolSchedulerApplication.model.FileLocationEvent;
+import com.toolScheduler.ToolSchedulerApplication.dto.PullAcknowledgement;
+import com.toolScheduler.ToolSchedulerApplication.dto.ScanParseEvent;
+import com.toolScheduler.ToolSchedulerApplication.dto.ScanRequestEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.UpdateEvent;
 
@@ -25,7 +27,7 @@ public class KafkaConfig {
     private static final String BOOTSTRAP = "localhost:9092";
 
     @Bean
-    public ConsumerFactory<String, ScanEvent> scanEventConsumerFactory() {
+    public ConsumerFactory<String, ScanRequestEvent> scanEventConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
@@ -36,13 +38,13 @@ public class KafkaConfig {
         return new DefaultKafkaConsumerFactory<>(
                 props,
                 new StringDeserializer(),
-                new JsonDeserializer<>(ScanEvent.class)
+                new JsonDeserializer<>(ScanRequestEvent.class)
         );
     }
 
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ScanEvent> scanEventListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, ScanEvent> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> scanEventListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(scanEventConsumerFactory());
         return factory;
@@ -64,7 +66,7 @@ public class KafkaConfig {
     }
 
     @Bean
-    public ProducerFactory<String, FileLocationEvent> fileLocationProducerFactory() {
+    public ProducerFactory<String, ScanParseEvent> fileLocationProducerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
@@ -73,8 +75,23 @@ public class KafkaConfig {
     }
 
     @Bean
-    public KafkaTemplate<String, FileLocationEvent> fileLocationKafkaTemplate() {
+    public KafkaTemplate<String, ScanParseEvent> fileLocationKafkaTemplate() {
         return new KafkaTemplate<>(fileLocationProducerFactory());
+    }
+
+    @Bean
+    public ProducerFactory<String, PullAcknowledgement> acknowledgementProducerFactory() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        props.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+    @Bean
+    public KafkaTemplate<String, PullAcknowledgement> acknowledgementKafkaTemplate() {
+        return new KafkaTemplate<>(acknowledgementProducerFactory());
     }
 
     @Bean

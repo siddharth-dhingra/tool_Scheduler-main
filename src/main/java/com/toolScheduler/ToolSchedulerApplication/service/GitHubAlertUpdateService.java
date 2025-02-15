@@ -1,15 +1,19 @@
 package com.toolScheduler.ToolSchedulerApplication.service;
 
-import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
+import com.toolScheduler.ToolSchedulerApplication.model.ToolType;
 import com.toolScheduler.ToolSchedulerApplication.model.UpdateEvent;
 
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
 public class GitHubAlertUpdateService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitHubAlertUpdateService.class);
 
     private final WebClient.Builder webClientBuilder;
 
@@ -24,10 +28,9 @@ public class GitHubAlertUpdateService {
      * @param pat the GitHub personal access token for this (owner, repo)
      */
     public void updateAlert(UpdateEvent event, String pat, String owner, String repo) {
-        ScanType tool = event.getToolType();
+        ToolType tool = event.getToolType();
         String url = buildPatchUrl(tool, owner, repo, event.getAlertNumber());
         String body = buildPatchBody(tool, event.getNewState(), event.getReason());
-        System.out.println(body);
 
         String response = webClientBuilder.build()
                 .patch()
@@ -39,10 +42,10 @@ public class GitHubAlertUpdateService {
                 .bodyToMono(String.class)
                 .block();
 
-        System.out.println("GitHub PATCH response: " + response);
+        LOGGER.info("GitHub PATCH response: " + response);
     }
 
-    private String buildPatchUrl(ScanType toolType, String owner, String repo, long alertNumber) {
+    private String buildPatchUrl(ToolType toolType, String owner, String repo, long alertNumber) {
         String base = "https://api.github.com/repos/" + owner + "/" + repo;
         switch (toolType) {
             case CODESCAN:
@@ -59,7 +62,7 @@ public class GitHubAlertUpdateService {
         }
     }
 
-    private String buildPatchBody(ScanType toolType, String newState, String reason) {
+    private String buildPatchBody(ToolType toolType, String newState, String reason) {
         // If "open", no reason
         if ("open".equalsIgnoreCase(newState)) {
             return "{\"state\":\"open\"}";

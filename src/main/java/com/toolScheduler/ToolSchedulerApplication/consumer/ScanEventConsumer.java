@@ -2,6 +2,7 @@ package com.toolScheduler.ToolSchedulerApplication.consumer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.toolScheduler.ToolSchedulerApplication.dto.ScanRequestEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 import com.toolScheduler.ToolSchedulerApplication.service.ScanEventService;
 
@@ -27,11 +28,14 @@ public class ScanEventConsumer {
 
     @KafkaListener(topics = "${app.kafka.topics.scan}", groupId = "${spring.kafka.consumer.group-id}",
             containerFactory = "scanEventListenerContainerFactory")
-    public void consumeScanEvent(ConsumerRecord<String, ScanEvent> record)
+    public void consumeScanEvent(ConsumerRecord<String, ScanRequestEvent> record)
             throws JsonMappingException, JsonProcessingException {
-        ScanEvent event = record.value();
-        LOGGER.info("Received ScanEvent: {}", event);
-        scanEventService.processScanEvent(event);
+
+        ScanRequestEvent eventWrapper = record.value();
+        String eventId = eventWrapper.getEventId();
+        ScanEvent event = eventWrapper.getPayload();
+        LOGGER.info("Received ScanRequestEvent of type {} with payload: {}", eventWrapper.getType(), event);
+        scanEventService.processScanEvent(event, eventId);
     }
 }
 

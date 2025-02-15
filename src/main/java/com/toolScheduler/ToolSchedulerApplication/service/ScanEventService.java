@@ -2,10 +2,15 @@ package com.toolScheduler.ToolSchedulerApplication.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.toolScheduler.ToolSchedulerApplication.dto.PullAcknowledgement;
+import com.toolScheduler.ToolSchedulerApplication.dto.ScanParseEvent;
+import com.toolScheduler.ToolSchedulerApplication.model.AcknowledgementEvent;
+import com.toolScheduler.ToolSchedulerApplication.model.AcknowledgementStatus;
 import com.toolScheduler.ToolSchedulerApplication.model.FileLocationEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
-import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
+import com.toolScheduler.ToolSchedulerApplication.model.ToolType;
 import com.toolScheduler.ToolSchedulerApplication.model.Tenant;
+import com.toolScheduler.ToolSchedulerApplication.producer.AcknowledgementProducer;
 import com.toolScheduler.ToolSchedulerApplication.producer.FileEventProducer;
 import com.toolScheduler.ToolSchedulerApplication.repository.TenantRepository;
 import org.slf4j.Logger;
@@ -17,7 +22,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -28,16 +32,19 @@ public class ScanEventService {
     private final TenantRepository tenantRepository;
     private final GitHubScanService gitHubScanService;
     private final FileEventProducer fileEventProducer;
+    private final AcknowledgementProducer acknowledgementProducer;
 
     public ScanEventService(TenantRepository tenantRepository,
                             GitHubScanService gitHubScanService,
-                            FileEventProducer fileEventProducer) {
+                            FileEventProducer fileEventProducer,
+                            AcknowledgementProducer acknowledgementProducer) {
         this.tenantRepository = tenantRepository;
         this.gitHubScanService = gitHubScanService;
         this.fileEventProducer = fileEventProducer;
+        this.acknowledgementProducer = acknowledgementProducer;
     }
 
-    public void processScanEvent(ScanEvent event) throws JsonMappingException, JsonProcessingException {
+    public void processScanEvent(ScanEvent event, String eventId) throws JsonMappingException, JsonProcessingException {
         String tenantId = event.getTenantId();
         Optional<Tenant> optTenant = tenantRepository.findByTenantId(tenantId);
         if (optTenant.isEmpty()) {
@@ -46,24 +53,15 @@ public class ScanEventService {
         }
         Tenant tenant = optTenant.get();
 
-        List<ScanType> effectiveTypes = expandTypes(event.getTypes());
-
-        for (ScanType toolType : effectiveTypes) {
-            performScanAndPublish(tenant, toolType);
+        if(event.getToolType() == null){
+            return;
         }
+        ToolType effectiveTypes = event.getToolType();
+
+        performScanAndPublish(tenant, effectiveTypes, eventId);
     }
 
-    private List<ScanType> expandTypes(List<ScanType> incomingTypes) {
-        if (incomingTypes == null || incomingTypes.isEmpty()) {
-            return List.of();
-        }
-        if (incomingTypes.contains(ScanType.ALL)) {
-            return List.of(ScanType.CODESCAN, ScanType.DEPENDABOT, ScanType.SECRETSCAN);
-        }
-        return incomingTypes;
-    }
-
-    private void performScanAndPublish(Tenant tenant, ScanType toolType) throws JsonMappingException, JsonProcessingException {
+    private void performScanAndPublish(Tenant tenant, ToolType toolType, String eventId) throws JsonMappingException, JsonProcessingException {
         String rawJson = gitHubScanService.performSingleToolScan(
                 tenant.getPat(), 
                 tenant.getOwner(), 
@@ -71,8 +69,8 @@ public class ScanEventService {
                 toolType
         );
 
-        String toolFolder = mapToolFolder(toolType);
-        String folderPath = buildFolderPath(toolFolder, tenant.getOwner(), tenant.getRepo());
+        ToolType toolFolder = mapToolFolder(toolType);
+        String folderPath = buildFolderPath(toolFolder.toString(), tenant.getOwner(), tenant.getRepo());
 
         if (!createFolderIfNeeded(folderPath)) {
             LOGGER.error("Failed to create directories at: {}", folderPath);
@@ -84,17 +82,26 @@ public class ScanEventService {
             return;
         }
 
-        FileLocationEvent fle = new FileLocationEvent(filePath, tenant.getEsIndex(), toolFolder);
-        fileEventProducer.publishFileLocationEvent(fle);
+        String jobId = eventId;
+        AcknowledgementEvent ackEvent = new AcknowledgementEvent(jobId);
+        // Optionally, set status based on your processing logic:
+        ackEvent.setStatus(AcknowledgementStatus.SUCCESS);
+        PullAcknowledgement ack = new PullAcknowledgement(null, ackEvent);
+        acknowledgementProducer.sendAcknowledgement(ack);
+        LOGGER.info("Published PullAcknowledgement with jobId={}", jobId);
+
+        FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
+        ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
+        fileEventProducer.publishFileLocationEvent(scanParseEvent);
         LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
     }
 
-    private String mapToolFolder(ScanType t) {
+    private ToolType mapToolFolder(ToolType t) {
         return switch (t) {
-            case CODESCAN -> "codescan";
-            case DEPENDABOT -> "dependabot";
-            case SECRETSCAN -> "secretscan";
-            default -> "mixed";
+            case CODESCAN -> ToolType.CODESCAN;
+            case DEPENDABOT -> ToolType.DEPENDABOT;
+            case SECRETSCAN -> ToolType.SECRETSCAN;
+            default -> ToolType.CODESCAN;
         };
     }
 
@@ -120,7 +127,7 @@ public class ScanEventService {
         return folderPath + File.separator + fileName;
     }
 
-    private boolean writeJsonToFile(String filePath, String rawJson, ScanType toolType) {
+    private boolean writeJsonToFile(String filePath, String rawJson, ToolType toolType) {
         try (FileWriter fw = new FileWriter(filePath)) {
             fw.write(rawJson);
             LOGGER.info("Wrote scan data for tool={} to {}", toolType, filePath);

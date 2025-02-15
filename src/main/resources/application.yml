@@ -24,8 +24,9 @@ app:
   kafka:
     topics:
       update: "tool-update-ingestion"
-      scan: "tool-scan-ingestion"
-      filelocation: "file-location-topic"
+      scan: jfc-tool-topic
+      filelocation: tool-jfc-topic
+      job-acknowledgement: job-acknowledgement-topic
 
 
 

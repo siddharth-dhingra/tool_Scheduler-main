@@ -3,14 +3,14 @@ package com.toolScheduler.ToolSchedulerApplication.model;
 public class UpdateEvent {
 
     private String tenantId;
-    private ScanType toolType;
+    private ToolType toolType;
     private long alertNumber;
     private String newState;
     private String reason;
 
     public UpdateEvent() {}
 
-    public UpdateEvent(String tenantId, ScanType toolType,
+    public UpdateEvent(String tenantId, ToolType toolType,
                        long alertNumber, String newState, String reason) {
         this.tenantId = tenantId;
         this.toolType = toolType;
@@ -26,10 +26,10 @@ public class UpdateEvent {
         this.tenantId = tenantId;
     }
 
-    public ScanType getToolType() {
+    public ToolType getToolType() {
         return toolType;
     }
-    public void setToolType(ScanType toolType) {
+    public void setToolType(ToolType toolType) {
         this.toolType = toolType;
     }
 

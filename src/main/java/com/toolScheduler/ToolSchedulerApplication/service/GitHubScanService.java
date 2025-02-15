@@ -5,17 +5,21 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.toolScheduler.ToolSchedulerApplication.model.ScanType;
+import com.toolScheduler.ToolSchedulerApplication.model.ToolType;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.client.WebClient;
 
 @Service
 public class GitHubScanService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GitHubScanService.class);
 
     private final WebClient.Builder webClientBuilder;
 
@@ -23,7 +27,7 @@ public class GitHubScanService {
         this.webClientBuilder = webClientBuilder;
     }
 
-    public String performSingleToolScan(String pat,  String owner, String repo, ScanType toolType) throws JsonMappingException, JsonProcessingException {
+    public String performSingleToolScan(String pat,  String owner, String repo, ToolType toolType) throws JsonMappingException, JsonProcessingException {
         switch (toolType) {
             case CODESCAN:
                 return fetchAlerts(owner, repo, "code-scanning", pat);
@@ -65,7 +69,7 @@ public class GitHubScanService {
 
             JsonNode root = mapper.readTree(responseData);
             if (!root.isArray()) {
-                System.out.println("Warning: Expected array, got something else for page " + page);
+                LOGGER.info("Warning: Expected array, got something else for page " + page);
                 break;
             }
 

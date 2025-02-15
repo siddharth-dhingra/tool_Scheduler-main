@@ -1,7 +1,6 @@
 package com.toolScheduler.ToolSchedulerApplication.model;
 
-public enum ScanType {
-    ALL,
+public enum ToolType {
     CODESCAN,
     DEPENDABOT,
     SECRETSCAN

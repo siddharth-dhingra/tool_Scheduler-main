@@ -1,30 +1,37 @@
 package com.toolScheduler.ToolSchedulerApplication.model;
 
-import java.util.List;
 
 public class ScanEvent {
-
     private String tenantId;
-    private List<ScanType> types;
+    private ToolType toolType;
 
-    public ScanEvent() {}
-
-    public ScanEvent(String tenantId, List<ScanType> types) {
-        this.tenantId = tenantId;
-        this.types = types;
+    public ScanEvent() {
     }
 
-    public String getTenantId() { return tenantId; }
-    public void setTenantId(String tenantId) { this.tenantId = tenantId; }
+    public ScanEvent(String tenantId, ToolType toolType) {
+        this.tenantId = tenantId;
+        this.toolType = toolType;
+    }
 
-    public List<ScanType> getTypes() { return types; }
-    public void setTypes(List<ScanType> types) { this.types = types; }
+    public String getTenantId() {
+        return tenantId;
+    }
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public ToolType getToolType() {
+        return toolType;
+    }
+    public void setToolType(ToolType toolType) {
+        this.toolType = toolType;
+    }
 
     @Override
     public String toString() {
         return "ScanEvent{" +
                 "tenantId='" + tenantId + '\'' +
-                ", types=" + types +
+                ", toolType=" + toolType +
                 '}';
     }
 }

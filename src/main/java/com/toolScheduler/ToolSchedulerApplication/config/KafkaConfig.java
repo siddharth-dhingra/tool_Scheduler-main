@@ -1,6 +1,5 @@
 package com.toolScheduler.ToolSchedulerApplication.config;
 import com.toolScheduler.ToolSchedulerApplication.dto.PullAcknowledgement;
-import com.toolScheduler.ToolSchedulerApplication.dto.ScanParseEvent;
 import com.toolScheduler.ToolSchedulerApplication.dto.ScanRequestEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
 
@@ -64,19 +63,34 @@ public class KafkaConfig {
         return new KafkaTemplate<>(scanEventProducerFactory());
     }
 
+    // @Bean
+    // public ProducerFactory<String, ScanParseEvent> fileLocationProducerFactory() {
+    //     Map<String, Object> props = new HashMap<>();
+    //     props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
+    //     props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+    //     props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+    //     return new DefaultKafkaProducerFactory<>(props);
+    // }
+
+    // @Bean
+    // public KafkaTemplate<String, ScanParseEvent> fileLocationKafkaTemplate() {
+    //     return new KafkaTemplate<>(fileLocationProducerFactory());
+    // }
+
     @Bean
-    public ProducerFactory<String, ScanParseEvent> fileLocationProducerFactory() {
+    public ProducerFactory<String, String> fileLocationProducerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
         return new DefaultKafkaProducerFactory<>(props);
     }
 
     @Bean
-    public KafkaTemplate<String, ScanParseEvent> fileLocationKafkaTemplate() {
+    public KafkaTemplate<String, String> fileLocationKafkaTemplate() {
         return new KafkaTemplate<>(fileLocationProducerFactory());
     }
+
 
     @Bean
     public ProducerFactory<String, PullAcknowledgement> acknowledgementProducerFactory() {

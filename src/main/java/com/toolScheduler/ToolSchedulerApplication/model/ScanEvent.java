@@ -4,6 +4,7 @@ package com.toolScheduler.ToolSchedulerApplication.model;
 public class ScanEvent {
     private String tenantId;
     private ToolType toolType;
+    private String jobId;
 
     public ScanEvent() {
     }
@@ -27,11 +28,19 @@ public class ScanEvent {
         this.toolType = toolType;
     }
 
+    public String getJobId() {
+        return jobId;
+    }
+    public void setJobId(String jobId) {
+        this.jobId = jobId;
+    }
+
     @Override
     public String toString() {
         return "ScanEvent{" +
                 "tenantId='" + tenantId + '\'' +
                 ", toolType=" + toolType +
+                ", jobId='" + jobId + '\'' +
                 '}';
     }
 }

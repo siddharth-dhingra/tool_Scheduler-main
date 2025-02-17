@@ -4,7 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.toolScheduler.ToolSchedulerApplication.dto.PullAcknowledgement;
 import com.toolScheduler.ToolSchedulerApplication.dto.ScanParseEvent;
-import com.toolScheduler.ToolSchedulerApplication.model.AcknowledgementEvent;
+import com.toolScheduler.ToolSchedulerApplication.model.AcknowledgementPayload;
 import com.toolScheduler.ToolSchedulerApplication.model.AcknowledgementStatus;
 import com.toolScheduler.ToolSchedulerApplication.model.FileLocationEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 public class ScanEventService {
@@ -44,7 +45,7 @@ public class ScanEventService {
         this.acknowledgementProducer = acknowledgementProducer;
     }
 
-    public void processScanEvent(ScanEvent event, String eventId) throws JsonMappingException, JsonProcessingException {
+    public void processScanEvent(ScanEvent event, String jobId) throws JsonMappingException, JsonProcessingException {
         String tenantId = event.getTenantId();
         Optional<Tenant> optTenant = tenantRepository.findByTenantId(tenantId);
         if (optTenant.isEmpty()) {
@@ -58,48 +59,56 @@ public class ScanEventService {
         }
         ToolType effectiveTypes = event.getToolType();
 
-        performScanAndPublish(tenant, effectiveTypes, eventId);
+        performScanAndPublish(tenant, effectiveTypes, jobId);
     }
 
-    private void performScanAndPublish(Tenant tenant, ToolType toolType, String eventId) throws JsonMappingException, JsonProcessingException {
-        String rawJson = gitHubScanService.performSingleToolScan(
+    private void performScanAndPublish(Tenant tenant, ToolType toolType, String jobId) throws JsonMappingException, JsonProcessingException {
+        try{
+            String rawJson = gitHubScanService.performSingleToolScan(
                 tenant.getPat(), 
                 tenant.getOwner(), 
                 tenant.getRepo(), 
                 toolType
-        );
+            );
 
-        ToolType toolFolder = mapToolFolder(toolType);
-        String folderPath = buildFolderPath(toolFolder.toString(), tenant.getOwner(), tenant.getRepo());
+            ToolType toolFolder = mapToolFolder(toolType);
+            String folderPath = buildFolderPath(toolFolder.toString(), tenant.getOwner(), tenant.getRepo());
 
-        if (!createFolderIfNeeded(folderPath)) {
-            LOGGER.error("Failed to create directories at: {}", folderPath);
-            return;
+            if (!createFolderIfNeeded(folderPath)) {
+                LOGGER.error("Failed to create directories at: {}", folderPath);
+                return;
+            }
+
+            String filePath = buildFilePath(folderPath, tenant.getOwner(), tenant.getRepo());
+            if (!writeJsonToFile(filePath, rawJson, toolType)) {
+                return;
+            }
+
+            try {
+                Thread.sleep(15000);
+            } catch (InterruptedException ex) {
+                Thread.currentThread().interrupt();
+            }
+
+            FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
+            ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
+            fileEventProducer.publishFileLocationEvent(scanParseEvent);
+            LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
+
+            sendAcknowledgement(jobId, AcknowledgementStatus.SUCCESS);
         }
-
-        String filePath = buildFilePath(folderPath, tenant.getOwner(), tenant.getRepo());
-        if (!writeJsonToFile(filePath, rawJson, toolType)) {
-            return;
+        catch (Exception e){
+            sendAcknowledgement(jobId, AcknowledgementStatus.FAILURE);
+            LOGGER.error("Error processing scan event", e);
         }
+    }
 
-        try {
-            Thread.sleep(15000);
-        } catch (InterruptedException ex) {
-            Thread.currentThread().interrupt();
-        }
-
-        FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
-        ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
-        fileEventProducer.publishFileLocationEvent(scanParseEvent);
-        LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
-
-        String jobId = eventId;
-        AcknowledgementEvent ackEvent = new AcknowledgementEvent(jobId);
-        // Optionally, set status based on your processing logic:
-        ackEvent.setStatus(AcknowledgementStatus.SUCCESS);
-        PullAcknowledgement ack = new PullAcknowledgement(null, ackEvent);
+    private void sendAcknowledgement(String jobId, AcknowledgementStatus status) {
+        AcknowledgementPayload ackEvent = new AcknowledgementPayload(jobId);
+        ackEvent.setStatus(status);
+        PullAcknowledgement ack = new PullAcknowledgement(UUID.randomUUID().toString(), ackEvent);
         acknowledgementProducer.sendAcknowledgement(ack);
-        LOGGER.info("Published PullAcknowledgement with jobId={}", jobId);
+        LOGGER.info("Sent acknowledgement for jobId {}: {}", jobId, ack);
     }
 
     private ToolType mapToolFolder(ToolType t) {

@@ -1,13 +1,13 @@
 package com.toolScheduler.ToolSchedulerApplication.model;
 
-public class AcknowledgementEvent {
+public class AcknowledgementPayload {
     
     private AcknowledgementStatus status = AcknowledgementStatus.SUCCESS;
     private String jobId;
 
-    public AcknowledgementEvent() {}
+    public AcknowledgementPayload() {}
 
-    public AcknowledgementEvent(String jobId) {
+    public AcknowledgementPayload(String jobId) {
         this.jobId = jobId;
     }
 

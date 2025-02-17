@@ -32,10 +32,10 @@ public class ScanEventConsumer {
             throws JsonMappingException, JsonProcessingException {
 
         ScanRequestEvent eventWrapper = record.value();
-        String eventId = eventWrapper.getEventId();
         ScanEvent event = eventWrapper.getPayload();
+        String jobId = event.getJobId();
         LOGGER.info("Received ScanRequestEvent of type {} with payload: {}", eventWrapper.getType(), event);
-        scanEventService.processScanEvent(event, eventId);
+        scanEventService.processScanEvent(event, jobId);
     }
 }
 

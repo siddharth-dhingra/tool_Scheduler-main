@@ -24,7 +24,8 @@ app:
   kafka:
     topics:
       scan: jfc-tool-topic
-      filelocation: tool-jfc-topic
+      filelocation: job-topic
+      parse-destination: jfc-parser-topic
       job-acknowledgement: job-acknowledgement-topic
 
 

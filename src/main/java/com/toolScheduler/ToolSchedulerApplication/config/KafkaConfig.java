@@ -3,7 +3,6 @@ import com.toolScheduler.ToolSchedulerApplication.dto.PullAcknowledgement;
 import com.toolScheduler.ToolSchedulerApplication.dto.ScanParseEvent;
 import com.toolScheduler.ToolSchedulerApplication.dto.ScanRequestEvent;
 import com.toolScheduler.ToolSchedulerApplication.model.ScanEvent;
-import com.toolScheduler.ToolSchedulerApplication.model.UpdateEvent;
 
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
@@ -92,30 +91,5 @@ public class KafkaConfig {
     @Bean
     public KafkaTemplate<String, PullAcknowledgement> acknowledgementKafkaTemplate() {
         return new KafkaTemplate<>(acknowledgementProducerFactory());
-    }
-
-    @Bean
-    public ConsumerFactory<String, UpdateEvent> updateEventConsumerFactory() {
-        Map<String, Object> props = new HashMap<>();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, "toolscheduler-group-update");
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new StringDeserializer(),
-                new JsonDeserializer<>(UpdateEvent.class)
-        );
-    }
-
-    @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, UpdateEvent> updateEventListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, UpdateEvent> factory =
-                new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(updateEventConsumerFactory());
-        return factory;
     }
 }

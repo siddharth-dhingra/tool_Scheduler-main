@@ -23,7 +23,6 @@ spring:
 app:
   kafka:
     topics:
-      update: "tool-update-ingestion"
       scan: jfc-tool-topic
       filelocation: tool-jfc-topic
       job-acknowledgement: job-acknowledgement-topic

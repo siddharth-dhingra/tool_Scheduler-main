@@ -82,6 +82,17 @@ public class ScanEventService {
             return;
         }
 
+        try {
+            Thread.sleep(15000);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        }
+
+        FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
+        ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
+        fileEventProducer.publishFileLocationEvent(scanParseEvent);
+        LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
+
         String jobId = eventId;
         AcknowledgementEvent ackEvent = new AcknowledgementEvent(jobId);
         // Optionally, set status based on your processing logic:
@@ -89,11 +100,6 @@ public class ScanEventService {
         PullAcknowledgement ack = new PullAcknowledgement(null, ackEvent);
         acknowledgementProducer.sendAcknowledgement(ack);
         LOGGER.info("Published PullAcknowledgement with jobId={}", jobId);
-
-        FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
-        ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
-        fileEventProducer.publishFileLocationEvent(scanParseEvent);
-        LOGGER.info("Published FileLocationEvent => [filePath={}, toolName={}]", filePath, toolFolder);
     }
 
     private ToolType mapToolFolder(ToolType t) {

@@ -25,28 +25,47 @@ public class KafkaConfig {
     private static final String BOOTSTRAP = "localhost:9092";
 
     @Bean
-    public ConsumerFactory<String, ScanRequestEvent> scanEventConsumerFactory() {
+    public ConsumerFactory<String, String> stringConsumerFactory() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.GROUP_ID_CONFIG, "toolscheduler-group");
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
-        return new DefaultKafkaConsumerFactory<>(
-                props,
-                new StringDeserializer(),
-                new JsonDeserializer<>(ScanRequestEvent.class)
-        );
+        return new DefaultKafkaConsumerFactory<>(props);
     }
 
+    // Add this container factory for String deserialization (for Option 1)
     @Bean
-    public ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> scanEventListenerContainerFactory() {
-        ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> factory =
+    public ConcurrentKafkaListenerContainerFactory<String, String> stringListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
                 new ConcurrentKafkaListenerContainerFactory<>();
-        factory.setConsumerFactory(scanEventConsumerFactory());
+        factory.setConsumerFactory(stringConsumerFactory());
         return factory;
     }
+
+    // @Bean
+    // public ConsumerFactory<String, ScanRequestEvent> scanEventConsumerFactory() {
+    //     Map<String, Object> props = new HashMap<>();
+    //     props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, BOOTSTRAP);
+    //     props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+    //     props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+    //     props.put(ConsumerConfig.GROUP_ID_CONFIG, "toolscheduler-group");
+    //     props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+    //     props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+    //     return new DefaultKafkaConsumerFactory<>(
+    //             props,
+    //             new StringDeserializer(),
+    //             new JsonDeserializer<>(ScanRequestEvent.class)
+    //     );
+    // }
+
+    // @Bean
+    // public ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> scanEventListenerContainerFactory() {
+    //     ConcurrentKafkaListenerContainerFactory<String, ScanRequestEvent> factory =
+    //             new ConcurrentKafkaListenerContainerFactory<>();
+    //     factory.setConsumerFactory(scanEventConsumerFactory());
+    //     return factory;
+    // }
 
     @Bean
     public ProducerFactory<String, ScanEvent> scanEventProducerFactory() {

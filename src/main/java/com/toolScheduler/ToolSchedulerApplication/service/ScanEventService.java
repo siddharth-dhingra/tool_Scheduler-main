@@ -84,12 +84,6 @@ public class ScanEventService {
                 return;
             }
 
-            try {
-                Thread.sleep(15000);
-            } catch (InterruptedException ex) {
-                Thread.currentThread().interrupt();
-            }
-
             FileLocationEvent fle = new FileLocationEvent(tenant.getTenantId(),filePath, toolFolder);
             ScanParseEvent scanParseEvent = new ScanParseEvent(null,fle);
             fileEventProducer.publishFileLocationEvent(scanParseEvent);
